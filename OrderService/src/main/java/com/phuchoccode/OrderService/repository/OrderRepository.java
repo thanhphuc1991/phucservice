@@ -1,6 +1,6 @@
 package com.phuchoccode.OrderService.repository;
 
-import com.phuchoccode.OrderService.entity.Order;
+import com.phuchoccode.OrderService.infrastructure.persistence.entity.Order;
 import com.phuchoccode.OrderService.model.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 

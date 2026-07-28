@@ -76,7 +76,7 @@ public class ShipmentCommandService {
 
     // ─── Mock ─────────────────────────────────────────────────
 
-    private boolean arrangeShipment(String orderId) {
+    protected boolean arrangeShipment(String orderId) {
         return true;
     }
 }

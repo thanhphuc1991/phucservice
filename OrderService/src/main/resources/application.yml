@@ -29,3 +29,20 @@ spring:
       properties:
         spring.json.trusted.packages: "com.phuchoccode.CommonnService.common.event"
         spring.json.use.type.headers: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+---
+# Profile docker — active khi chạy trong container
+spring:
+  config:
+    activate:
+      on-profile: docker
+  kafka:
+    bootstrap-servers: kafka:9092   # ← tên container trong Docker network

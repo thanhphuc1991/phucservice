@@ -1,6 +1,6 @@
-package com.phuchoccode.OrderService.entity;
+package com.phuchoccode.OrderService.infrastructure.persistence.entity;
 
-import com.phuchoccode.OrderService.model.OrderStatus;
+import com.phuchoccode.OrderService.domain.valueobject.OrderStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
