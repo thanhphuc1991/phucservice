@@ -1,0 +1,31 @@
+image:
+  registry: docker.io/phucservice
+  tag: "latest"
+  pullPolicy: Never
+
+kafka:
+  bootstrapServers: "192.168.1.78:9092"   # ← IP máy host
+
+orderService:
+  name: order-service
+  image: order-service
+  port: 8081
+  replicas: 1
+
+inventoryService:
+  name: inventory-service
+  image: inventory-service
+  port: 8082
+  replicas: 1
+
+paymentService:
+  name: payment-service
+  image: payment-service
+  port: 8083
+  replicas: 1
+
+shipmentService:
+  name: shipment-service
+  image: shipment-service
+  port: 8084
+  replicas: 1

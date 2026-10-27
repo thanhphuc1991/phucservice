@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface InventoryRepository extends JpaRepository<Inventory, String> {
-
     Optional<Inventory> findByReservedOrderId(String orderId);
+
 }

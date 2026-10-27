@@ -1,9 +1,13 @@
 package com.phuchoccode.OrderService.service;
 
-import com.phuchoccode.CommonnService.common.event.*;
+import com.phuchoccode.CommonService.common.event.InventoryReservedEvent;
+import com.phuchoccode.CommonService.common.event.PaymentProcessedEvent;
+import com.phuchoccode.CommonService.common.event.ShipmentStartedEvent;
 import com.phuchoccode.OrderService.application.service.OrderCommandService;
 import com.phuchoccode.OrderService.domain.aggregate.OrderAggregate;
 import com.phuchoccode.OrderService.domain.exception.OrderDomainException;
+import com.phuchoccode.OrderService.domain.port.outbound.OrderEventPublisherPort;
+import com.phuchoccode.OrderService.domain.port.outbound.OrderRepositoryPort;
 import com.phuchoccode.OrderService.domain.repository.OrderRepository;
 import com.phuchoccode.OrderService.domain.valueobject.CustomerId;
 import com.phuchoccode.OrderService.domain.valueobject.Money;
@@ -33,10 +37,10 @@ import static org.mockito.Mockito.*;
 class OrderCommandServiceTest {
 
     @Mock
-    private OrderRepository orderRepository;    // ← domain port
+    private OrderRepositoryPort orderRepository;
 
     @Mock
-    private KafkaEventPublisher eventPublisher;
+    private OrderEventPublisherPort eventPublisher;
 
     @InjectMocks
     private OrderCommandService orderCommandService;

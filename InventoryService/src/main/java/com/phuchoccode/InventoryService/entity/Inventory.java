@@ -15,4 +15,5 @@ public class Inventory {
     private String productId;
     private int availableQuantity;
     private int reservedQuantity;
+    private String reservedOrderId;
 }

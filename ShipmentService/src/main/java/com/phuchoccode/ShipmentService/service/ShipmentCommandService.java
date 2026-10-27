@@ -1,7 +1,7 @@
 package com.phuchoccode.ShipmentService.service;
 
-import com.phuchoccode.CommonnService.common.event.PaymentProcessedEvent;
-import com.phuchoccode.CommonnService.common.event.ShipmentStartedEvent;
+import com.phuchoccode.CommonService.common.event.PaymentProcessedEvent;
+import com.phuchoccode.CommonService.common.event.ShipmentStartedEvent;
 import com.phuchoccode.ShipmentService.entity.Shipment;
 import com.phuchoccode.ShipmentService.model.ShipmentStatus;
 import com.phuchoccode.ShipmentService.repository.ShipmentRepository;

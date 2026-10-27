@@ -1,8 +1,8 @@
 // infrastructure/messaging/KafkaEventPublisher.java
 package com.phuchoccode.OrderService.infrastructure.messaging;
 
-import com.phuchoccode.CommonnService.common.event.OrderCancelledEvent;
-import com.phuchoccode.CommonnService.common.event.OrderCreatedEvent;
+import com.phuchoccode.CommonService.common.event.OrderCancelledEvent;
+import com.phuchoccode.CommonService.common.event.OrderCreatedEvent;
 import com.phuchoccode.OrderService.domain.event.OrderCancelledDomainEvent;
 import com.phuchoccode.OrderService.domain.event.OrderDomainEvent;
 import com.phuchoccode.OrderService.domain.event.OrderPlacedEvent;

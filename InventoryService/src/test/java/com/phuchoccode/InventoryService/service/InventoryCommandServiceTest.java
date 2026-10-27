@@ -1,6 +1,6 @@
 package com.phuchoccode.InventoryService.service;
 
-import com.phuchoccode.CommonnService.common.event.*;
+import com.phuchoccode.CommonService.common.event.*;
 import com.phuchoccode.InventoryService.entity.Inventory;
 import com.phuchoccode.InventoryService.repository.InventoryRepository;
 import org.junit.jupiter.api.DisplayName;

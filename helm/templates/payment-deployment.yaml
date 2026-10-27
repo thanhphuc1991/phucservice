@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.paymentService.name }}
+spec:
+  replicas: {{ .Values.paymentService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.paymentService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.paymentService.name }}
+    spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - until nc -z {{ .Values.kafka.bootstrapServers | replace ":9092" "" }} 9092; do echo "Waiting for Kafka..."; sleep 3; done
+      containers:
+        - name: {{ .Values.paymentService.name }}
+          image: {{ .Values.image.registry }}/{{ .Values.paymentService.image }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.paymentService.port }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.paymentService.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.paymentService.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.paymentService.name }}
+spec:
+  type: NodePort    # expose ra ngoài để test
+  selector:
+    app: {{ .Values.paymentService.name }}
+  ports:
+    - port: {{ .Values.paymentService.port }}
+      targetPort: {{ .Values.paymentService.port }}
+      nodePort: 30083   # port truy cập từ ngoài

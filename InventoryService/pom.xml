@@ -12,12 +12,13 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
-        <java.version>26</java.version>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
     </properties>
     <dependencies>
         <dependency>
             <groupId>com.phuchoccode</groupId>
-            <artifactId>CommonnService</artifactId>
+            <artifactId>CommonService</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -32,7 +33,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -63,6 +67,21 @@
             <groupId>com.phuchoccode</groupId>
             <artifactId>CommonService</artifactId>
         </dependency>
+        <!-- OpenTelemetry Tracing -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+            <version>1.40.0</version>
+        </dependency>
+        <!-- Kafka tracing propagation -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -90,7 +109,7 @@
                     </from>
                     <to>
                         <!-- Tên image output -->
-                        <image>phucservice/${project.artifactId}:${project.version}</image>
+                        <image>phucservice/inventory-service</image>
                         <tags>
                             <tag>latest</tag>
                         </tags>
@@ -102,7 +121,7 @@
                             <jvmFlag>-Xmx512m</jvmFlag>
                         </jvmFlags>
                         <ports>
-                            <port>8081</port>
+                            <port>8082</port>
                         </ports>
                         <environment>
                             <SPRING_PROFILES_ACTIVE>docker</SPRING_PROFILES_ACTIVE>

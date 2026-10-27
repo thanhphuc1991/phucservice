@@ -2,6 +2,9 @@ server:
   port: 8081
 
 spring:
+  config:
+    activate:
+      on-profile: docker
   application:
     name: order-service
   threads:
@@ -13,7 +16,12 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
+    show-sql: false
+  # Scheduling
+  task:
+    scheduling:
+      pool:
+        size: 2
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -21,14 +29,13 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
+        # Micrometer tự thêm trace headers
+        interceptor.classes: io.micrometer.kafka.observation.KafkaProducerObservationReporter
     consumer:
       group-id: order-service-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "com.phuchoccode.CommonnService.common.event"
-        spring.json.use.type.headers: false
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 management:
   endpoints:
@@ -38,6 +45,17 @@ management:
   endpoint:
     health:
       show-details: always
+  tracing:
+    sampling:
+      probability: 1.0    # trace 100% request (production dùng 0.1)
+    otlp:
+      tracing:
+        endpoint: http://localhost:4318/v1/traces   # Jaeger/Tempo endpoint
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+    # Log sẽ hiển thị: INFO [order-service,abc123,def456] ...
 ---
 # Profile docker — active khi chạy trong container
 spring:
@@ -46,3 +64,44 @@ spring:
       on-profile: docker
   kafka:
     bootstrap-servers: kafka:9092   # ← tên container trong Docker network
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      inventoryService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10           # xét 10 request gần nhất
+        minimumNumberOfCalls: 5         # cần ít nhất 5 calls để tính
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s    # chờ 10s trước khi thử lại
+        failureRateThreshold: 50        # 50% fail → OPEN
+        eventConsumerBufferSize: 10
+
+      paymentService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+
+  retry:
+    instances:
+      inventoryService:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2  # 1s, 2s, 4s
+      kafkaPublisher:
+        maxAttempts: 3
+        waitDuration: 500ms
+        retryExceptions:
+          - org.apache.kafka.common.errors.RetriableException
+          - java.io.IOException
+        ignoreExceptions:
+          - com.phuchoccode.OrderService.domain.exception.OrderDomainException
+
+  timelimiter:
+    instances:
+      inventoryService:
+        timeoutDuration: 3s

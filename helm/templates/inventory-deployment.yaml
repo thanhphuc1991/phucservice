@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.inventoryService.name }}
+spec:
+  replicas: {{ .Values.inventoryService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.inventoryService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.inventoryService.name }}
+    spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - until nc -z {{ .Values.kafka.bootstrapServers | replace ":9092" "" }} 9092; do echo "Waiting for Kafka..."; sleep 3; done
+      containers:
+        - name: {{ .Values.inventoryService.name }}
+          image: {{ .Values.image.registry }}/{{ .Values.inventoryService.image }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.inventoryService.port }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.inventoryService.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.inventoryService.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.inventoryService.name }}
+spec:
+  type: NodePort    # expose ra ngoài để test
+  selector:
+    app: {{ .Values.inventoryService.name }}
+  ports:
+    - port: {{ .Values.inventoryService.port }}
+      targetPort: {{ .Values.inventoryService.port }}
+      nodePort: 30082   # port truy cập từ ngoài

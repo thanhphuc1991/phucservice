@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.orderService.name }}
+spec:
+  replicas: {{ .Values.orderService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.orderService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.orderService.name }}
+    spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - until nc -z {{ .Values.kafka.bootstrapServers | replace ":9092" "" }} 9092; do echo "Waiting for Kafka..."; sleep 3; done
+      containers:
+        - name: {{ .Values.orderService.name }}
+          image: {{ .Values.image.registry }}/{{ .Values.orderService.image }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.orderService.port }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.orderService.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.orderService.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.orderService.name }}
+spec:
+  type: NodePort
+  selector:
+    app: {{ .Values.orderService.name }}
+  ports:
+    - port: {{ .Values.orderService.port }}
+      targetPort: {{ .Values.orderService.port }}
+      nodePort: 30081

@@ -1,6 +1,6 @@
 package com.phuchoccode.InventoryService.service;
 
-import com.phuchoccode.CommonnService.common.event.*;
+import com.phuchoccode.CommonService.common.event.*;
 import com.phuchoccode.InventoryService.entity.Inventory;
 import com.phuchoccode.InventoryService.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,9 +35,9 @@ public class InventoryCommandService {
     private void reserveStock(Inventory inv, OrderCreatedEvent event) {
         inv.setAvailableQuantity(inv.getAvailableQuantity() - event.quantity());
         inv.setReservedQuantity(inv.getReservedQuantity() + event.quantity());
+        inv.setReservedOrderId(event.orderId());    // ← lưu orderId để compensate sau
         inventoryRepository.save(inv);
 
-        // Dùng static factory method success() từ record mới
         kafkaTemplate.send("inventory.reserved", event.orderId(),
                 InventoryReservedEvent.success(
                         event.orderId(),
@@ -49,7 +49,6 @@ public class InventoryCommandService {
     }
 
     private void publishInventoryFailed(OrderCreatedEvent event, String reason) {
-        // Dùng static factory method failure() từ record mới
         kafkaTemplate.send("inventory.failed", event.orderId(),
                 InventoryReservedEvent.failure(
                         event.orderId(),
@@ -61,36 +60,43 @@ public class InventoryCommandService {
         log.warn("Inventory FAILED — orderId={}, reason={}", event.orderId(), reason);
     }
 
-    // ─── Compensate — tách thành 2 method riêng ──────────────
+    // ─── Compensate ───────────────────────────────────────────
 
     @KafkaListener(topics = "payment.failed", groupId = "inventory-service-group")
     public void onPaymentFailed(PaymentProcessedEvent event) {
-        releaseStock(event.orderId());
+        if (!event.success()) {
+            releaseStock(event.orderId());
+        }
     }
 
     @KafkaListener(topics = "shipment.failed", groupId = "inventory-service-group")
     public void onShipmentFailed(ShipmentStartedEvent event) {
-        releaseStock(event.orderId());
+        if (!event.success()) {
+            releaseStock(event.orderId());
+        }
     }
 
     private void releaseStock(String orderId) {
         log.info("Compensating inventory — orderId={}", orderId);
 
-        // Paste Inventory entity lên để mình fix phần này chính xác
         inventoryRepository.findByReservedOrderId(orderId)
                 .ifPresent(inv -> {
-                    inv.setAvailableQuantity(inv.getAvailableQuantity() + inv.getReservedQuantity());
+                    int quantityToRelease = inv.getReservedQuantity();
+
+                    inv.setAvailableQuantity(inv.getAvailableQuantity() + quantityToRelease);
                     inv.setReservedQuantity(0);
+                    inv.setReservedOrderId(null);    // ← clear orderId sau khi release
                     inventoryRepository.save(inv);
 
                     kafkaTemplate.send("inventory.released", orderId,
                             new InventoryReleasedEvent(
                                     orderId,
                                     inv.getProductId(),
-                                    inv.getReservedQuantity()
+                                    quantityToRelease    // ← dùng biến đã lưu trước khi set về 0
                             )
                     );
-                    log.info("Inventory released — orderId={}", orderId);
+                    log.info("Inventory released — orderId={}, quantity={}",
+                            orderId, quantityToRelease);
                 });
     }
 }

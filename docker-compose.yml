@@ -1,12 +1,9 @@
-version: '3.8'
-
 networks:
   phucservice-network:
     driver: bridge
 
 services:
 
-  # ─── Kafka (KRaft mode — không cần ZooKeeper) ────────────
   kafka:
     image: apache/kafka:4.0.0
     container_name: kafka
@@ -24,17 +21,18 @@ services:
     networks:
       - phucservice-network
     healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
-  # ─── Kafka UI — xem topics và messages ───────────────────
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
+    pull_policy: never
     ports:
-      - "8080:8080"
+      - "9000:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
@@ -44,15 +42,17 @@ services:
     networks:
       - phucservice-network
 
-  # ─── OrderService ─────────────────────────────────────────
   order-service:
-    image: phucservice/OrderService:0.0.1-SNAPSHOT
+    image: phucservice/order-service:latest
+    pull_policy: never
     container_name: order-service
+    restart: on-failure
     ports:
       - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       kafka:
         condition: service_healthy
@@ -63,48 +63,84 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
+      start_period: 30s
 
-  # ─── InventoryService ─────────────────────────────────────
   inventory-service:
-    image: phucservice/InventoryService:0.0.1-SNAPSHOT
+    image: phucservice/inventory-service:latest
+    pull_policy: never
     container_name: inventory-service
+    restart: on-failure
     ports:
       - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       kafka:
         condition: service_healthy
     networks:
       - phucservice-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
-  # ─── PaymentService ───────────────────────────────────────
   payment-service:
-    image: phucservice/PaymentService:0.0.1-SNAPSHOT
+    image: phucservice/payment-service:latest
+    pull_policy: never
     container_name: payment-service
+    restart: on-failure
     ports:
       - "8083:8083"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       kafka:
         condition: service_healthy
     networks:
       - phucservice-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
-  # ─── ShipmentService ──────────────────────────────────────
   shipment-service:
-    image: phucservice/ShipmentService:0.0.1-SNAPSHOT
+    image: phucservice/shipment-service:latest
+    pull_policy: never
     container_name: shipment-service
+    restart: on-failure
     ports:
       - "8084:8084"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       kafka:
         condition: service_healthy
+    networks:
+      - phucservice-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
     networks:
       - phucservice-network

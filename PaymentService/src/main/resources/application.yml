@@ -2,6 +2,9 @@ server:
   port: 8083
 
 spring:
+  config:
+    activate:
+      on-profile: docker
   application:
     name: payment-service
   threads:
@@ -24,10 +27,7 @@ spring:
       group-id: payment-service-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "com.phuchoccode.CommonnService.common.event"
-        spring.json.use.type.headers: false
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 management:
   endpoints:
@@ -37,6 +37,17 @@ management:
   endpoint:
     health:
       show-details: always
+  tracing:
+    sampling:
+      probability: 1.0    # trace 100% request (production dùng 0.1)
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces   # Jaeger/Tempo endpoint
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+    # Log sẽ hiển thị: INFO [order-service,abc123,def456] ...
 ---
 # Profile docker — active khi chạy trong container
 spring:

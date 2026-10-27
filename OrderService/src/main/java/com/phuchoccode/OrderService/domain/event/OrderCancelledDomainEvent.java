@@ -1,9 +1,10 @@
-// domain/event/OrderCancelledDomainEvent.java
 package com.phuchoccode.OrderService.domain.event;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public record OrderCancelledDomainEvent(
+        String eventId,        // ← thêm
         String orderId,
         String reason,
         String failedStep,
@@ -13,6 +14,9 @@ public record OrderCancelledDomainEvent(
     public static OrderCancelledDomainEvent of(String orderId,
                                                String reason,
                                                String failedStep) {
-        return new OrderCancelledDomainEvent(orderId, reason, failedStep, Instant.now());
+        return new OrderCancelledDomainEvent(
+                UUID.randomUUID().toString(),  // ← tạo 1 lần duy nhất
+                orderId, reason, failedStep, Instant.now()
+        );
     }
 }
